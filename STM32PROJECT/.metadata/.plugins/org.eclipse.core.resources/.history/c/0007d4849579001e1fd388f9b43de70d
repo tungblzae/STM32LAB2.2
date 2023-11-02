@@ -1,0 +1,449 @@
+/* USER CODE BEGIN Header */
+/**
+  ******************************************************************************
+  * @file           : main.c
+  * @brief          : Main program body
+  ******************************************************************************
+  * @attention
+  *
+  * <h2><center>&copy; Copyright (c) 2023 STMicroelectronics.
+  * All rights reserved.</center></h2>
+  *
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
+  *
+  ******************************************************************************
+  */
+/* USER CODE END Header */
+/* Includes ------------------------------------------------------------------*/
+#include "main.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
+
+/* USER CODE END Includes */
+
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN PTD */
+
+/* USER CODE END PTD */
+
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
+
+/* USER CODE BEGIN PV */
+
+/* USER CODE END PV */
+
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+/* USER CODE BEGIN PFP */
+
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+
+/* USER CODE END 0 */
+
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
+	//TODO lab2ex1
+	// Define pins for common cathode connection to seven-segment displays
+	GPIO_TypeDef* COM_PORT = GPIOB;
+	uint16_t COM_PINS[7] = {GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2, GPIO_PIN_3, GPIO_PIN_4, GPIO_PIN_5, GPIO_PIN_6};
+	int current_display = 0;
+
+	void display7SEG(int num) {
+		// Define the segment patterns for digits 0-9
+		    // Assuming the display is connected to pins PB0 to PB6
+		    uint8_t segmentPatterns[] = {
+		        0b00111111, // 0
+		        0b00000110, // 1
+		        0b01011011, // 2
+		        0b01001111, // 3
+		        0b01100110, // 4
+		        0b01101101, // 5
+		        0b01111101, // 6
+		        0b00000111, // 7
+		        0b01111111, // 8
+		        0b01101111  // 9
+		    };
+
+		    if (num >= 0 && num <= 9) {
+		        // Set the GPIO pins PB0 to PB6 based on the segment pattern for the digit
+		        GPIOB->ODR = segmentPatterns[num];
+		    }
+	}
+
+	//TODO lab2ex2
+	// Timer interrupt callback
+	void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+	    if (htim->Instance == TIM2) {
+	        // Timer interrupt occurred
+
+	        // Display "1" on the first seven-segment display
+	        if (current_display == 0) {
+	            display7SEG(1);
+	        }
+	        // Display "2" on the second seven-segment display
+	        else {
+	            display7SEG(2);
+	        }
+
+	        // Increment the display index and ensure it stays within the valid range (0 to 1)
+	        current_display = (current_display + 1) % 2;
+	    }
+	}
+	void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+	    if (htim->Instance == TIM2) {
+	        // Timer interrupt occurred
+
+	        // Display the data from the display_data array on the current display
+	        display7SEG(display_data[current_display]);
+
+	        // Toggle the DOT LED (PA4)
+	        HAL_GPIO_TogglePin(DOT_PORT, DOT_PIN);
+
+	        // Increment the display index and ensure it stays within the valid range (0 to 3)
+	        current_display = (current_display + 1) % 4;
+	    }
+	}
+
+	int main(void) {
+	    // STM32 initialization and configuration
+
+	    // Start the timer to generate periodic interrupts
+	    HAL_TIM_Base_Start_IT(&htim2);
+
+	    int counter = 0;
+
+	    while (1) {
+	        display_data[0] = counter;
+	        counter++;
+	    }
+	}
+}
+//TODO lab2ex3
+void updateSegmentsForDisplayN(int display_number, uint8_t segment_values[]) {
+    // Define the pins for the segments for each display (customize this based on your hardware setup)
+    // define arrays for the segment pins of each display:
+    GPIO_TypeDef* SEGMENT_PORT[] = {GPIOA, GPIOB, GPIOC, GPIOD}; // Example ports for segments
+    uint16_t SEGMENT_PINS[] = {GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2, GPIO_PIN_3, GPIO_PIN_4, GPIO_PIN_5, GPIO_PIN_6, GPIO_PIN_7}; // Example pins for segments
+
+    // Check if the display_number is within a valid range
+    if (display_number >= 0 && display_number < MAX_LED) {
+        // Get the segment pins for the specified display
+        GPIO_TypeDef* port = SEGMENT_PORT[display_number];
+        uint16_t pins = SEGMENT_PINS[display_number];
+
+        // Update the segments for the specified display
+        for (int i = 0; i < 8; i++) {
+            // Use bitwise operations to control each segment based on segment_values array
+            HAL_GPIO_WritePin(port, pins, (segment_values[i] & (1 << i)) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        }
+
+    }
+}
+
+void update7SEG(int index, int display_number, uint8_t segment_values[8]) {
+    if (index >= 0 && index < MAX_LED) {
+        // Call updateSegmentsForDisplayN with the display number and segment values
+        updateSegmentsForDisplayN(display_number, segment_values);
+    }
+}
+
+void update7SEG(int index, int display_number, int value) {
+    if (index >= 0 && index < MAX_LED) {
+        // Call updateSegmentsForDisplayN with the display number and value
+        updateSegmentsForDisplayN(display_number, value);
+    }
+}
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+    if (htim->Instance == TIM2) {
+        // Timer interrupt occurred
+
+        // Invoke the update7SEG function with the current index
+        update7SEG(index_led);
+
+        // Increment the index_led and ensure it stays within the valid range (0 to 3)
+        index_led = (index_led + 1) % MAX_LED;
+    }
+}
+//TODO lab2ex4
+// Define pins for common cathode connection to seven-segment displays
+GPIO_TypeDef* COM_PORT = GPIOB;
+uint16_t COM_PINS[4] = {GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2, GPIO_PIN_3};
+int current_display = 0;
+int display_data[4] = {0, 0, 3, 0}; // Initial data for the displays
+
+// Define pin for the DOT LED
+#define DOT_PORT GPIOA
+#define DOT_PIN GPIO_PIN_4
+
+// Define pins for controlling the segments (customize based on your hardware)
+GPIO_TypeDef* SEGMENT_PORT[] = {GPIOA, GPIOB, GPIOC, GPIOD}; // Example ports for segments
+uint16_t SEGMENT_PINS[] = {GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2, GPIO_PIN_3, GPIO_PIN_4, GPIO_PIN_5, GPIO_PIN_6, GPIO_PIN_7}; // Example pins for segments
+
+// Create a lookup table for displaying numbers (customize based on your hardware)
+uint8_t segment_map[10] = {0b00111111, 0b00000110, 0b01011011, 0b01001111, 0b01100110, 0b01101101, 0b01111101, 0b00000111, 0b01111111, 0b01101111};
+
+void display7SEG(int num) {
+    // Check if num is within the valid range
+    if (num >= 0 && num <= 9) {
+        // Get the segment pattern for the value from the segment_map
+        uint8_t segment_pattern = segment_map[num];
+
+        // Update the segments for the current display using bitwise operations
+        for (int i = 0; i < 8; i++) {
+            HAL_GPIO_WritePin(SEGMENT_PORT[current_display], SEGMENT_PINS[i], (segment_pattern & (1 << i)) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        }
+    }
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+    if (htim->Instance == TIM2) {
+        // Timer interrupt occurred
+
+        // Display the data from the display_data array on the current display
+        display7SEG(display_data[current_display]);
+
+        // Toggle the DOT LED (PA4) every second
+        static int dot_toggle = 0;
+        if (dot_toggle) {
+            HAL_GPIO_TogglePin(DOT_PORT, DOT_PIN);
+        }
+        dot_toggle = !dot_toggle;
+
+        // Increment the display index and ensure it stays within the valid range (0 to 3)
+        current_display = (current_display + 1) % 4;
+
+        // Change the timer's period to set the frequency of the seven-segment update to 1Hz
+        htim2.Init.Period = 500;  // Set the period to 500 for a 1Hz frequency
+        HAL_TIM_Base_Init(&htim2);
+    }
+}
+
+int main(void) {
+    // STM32 initialization and configuration
+
+    // Start the timer to generate periodic interrupts
+    HAL_TIM_Base_Start_IT(&htim2);
+
+    while (1) {
+        // change the values in the display_data array for testing
+        // For instance, to display "1" on the first display and "2" on the second display:
+        display_data[0] = 1;
+        display_data[1] = 2;
+    }
+}
+//TODO lab2ex5
+void updateClockBuffer() {
+    // Extract the tens and ones digits for hour and minute
+    int hour_tens = hour / 10;
+    int hour_ones = hour % 10;
+    int minute_tens = minute / 10;
+    int minute_ones = minute % 10;
+
+    // Update the led_buffer with the digits, adding a leading zero if needed
+    led_buffer[0] = (hour_tens == 0) ? 0 : hour_tens;
+    led_buffer[1] = hour_ones;
+    led_buffer[2] = (minute_tens == 0) ? 0 : minute_tens;
+    led_buffer[3] = minute_ones;
+}
+
+int main(void) {
+    // STM32 initialization and configuration
+
+    while (1) {
+        // Update the clock values
+        second++;
+
+        if (second >= 60) {
+            second = 0;
+            minute++;
+        }
+        if (minute >= 60) {
+            minute = 0;
+            hour++;
+        }
+        if (hour >= 24) {
+            hour = 0;
+        }
+
+        // Update the led_buffer based on the current time
+        updateClockBuffer();
+
+        // Delay for 1000 milliseconds (1 second)
+        HAL_Delay(1000);
+    }
+}
+//TODO lab2ex6
+int hour = 15, minute = 8, second = 50;
+int led_buffer[4] = {0, 0, 0, 0}; // Initialize led_buffer
+
+void updateClockBuffer() {
+    // Extract the tens and ones digits for hour and minute
+    int hour_tens = hour / 10;
+    int hour_ones = hour % 10;
+    int minute_tens = minute / 10;
+    int minute_ones = minute % 10;
+
+    // Update the led_buffer with the digits, adding a leading zero if needed
+    led_buffer[0] = (hour_tens == 0) ? 0 : hour_tens;
+    led_buffer[1] = hour_ones;
+    led_buffer[2] = (minute_tens == 0) ? 0 : minute_tens;
+    led_buffer[3] = minute_ones;
+}
+
+int hour = 15, minute = 8, second = 50;
+int led_buffer[4] = {0, 0, 0, 0}; // Initialize led_buffer
+
+// Define the software timer variables
+int timer_counter = 0;
+int timer_flag = 0;
+int TIMER_CYCLE = 1000; // Timer cycle for 1 second
+
+void setTimer(int duration) {
+    timer_counter = duration / TIMER_CYCLE;
+    timer_flag = 0;
+}
+
+void timer_run() {
+    if (timer_counter > 0) {
+        timer_counter--;
+        if (timer_counter == 0) {
+            timer_flag = 1;
+        }
+    }
+}
+
+int main(void) {
+    // STM32 initialization and configuration
+
+    while (1) {
+        // Software timer for 1-second intervals
+        timer_run();
+
+        // Check if a 1-second interval has passed
+        if (timer_flag) {
+            // Update the clock values
+            second++;
+
+            if (second >= 60) {
+                second = 0;
+                minute++;
+            }
+            if (minute >= 60) {
+                minute = 0;
+                hour++;
+            }
+            if (hour >= 24) {
+                hour = 0;
+            }
+
+            // Update the led_buffer based on the current time
+            led_buffer[0] = (hour / 10) % 10;
+            led_buffer[1] = hour % 10;
+            led_buffer[2] = (minute / 10) % 10;
+            led_buffer[3] = minute % 10;
+
+            // Reset the timer flag for the next 1-second interval
+            timer_flag = 0;
+        }
+
+        // Control the DOT LED (PA4) as needed in your application
+        //  toggle it every second
+        if (timer_flag) {
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+        }
+
+
+    }
+}
+/**
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+//
+/* USER CODE BEGIN 4 */
+
+/* USER CODE END 4 */
+
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler_Debug */
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1)
+  {
+  }
+  /* USER CODE END Error_Handler_Debug */
+}
+
+#ifdef  USE_FULL_ASSERT
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  /* USER CODE END 6 */
+}
+#endif /* USE_FULL_ASSERT */
+
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
