@@ -1,0 +1,24 @@
+!SESSION 2023-11-02 22:21:44.651 -----------------------------------------------
+eclipse.buildId=Version 1.7.0
+java.version=11.0.10
+java.vendor=AdoptOpenJDK
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_US
+Command-line arguments:  -os win32 -ws win32 -arch x86_64
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2023-11-02 22:22:01.749
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2023-11-02 22:22:01.803
+!MESSAGE Log4j initialized with config file D:\STM32allprj\git\LAB2\gitlab2\STM32PROJECT\.metadata\.log4j.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2023-11-02 22:22:04.905
+!MESSAGE Started RMI Server, listening on port 41337
+
+!ENTRY org.eclipse.equinox.p2.metadata.repository 4 1000 2023-11-02 22:22:31.270
+!MESSAGE No repository found at jar:file:/C:/Users/nguye/OneDrive/Desktop/en.stm32cubef4_v1-27-0.zip!/.
+
+!ENTRY org.eclipse.equinox.p2.metadata.repository 4 1000 2023-11-02 22:22:31.279
+!MESSAGE No repository found at jar:file:/C:/Users/nguye/OneDrive/Desktop/en.patch_cubef4_v1-27-1.zip!/.
+
+!ENTRY org.eclipse.cdt.core 1 0 2023-11-02 22:22:35.393
+!MESSAGE Indexed 'Lab2i' (19 sources, 97 headers) in 1.97 sec: 6,763 declarations; 20,286 references; 2 unresolved inclusions; 36 syntax errors; 197 unresolved names (0.72%)
